@@ -5,7 +5,7 @@ apt-get -y install libpam-cracklib
 ufw enable
 echo FireWall Up
 apt-get -y purge john 
-read -p "Do you want to uninstall Telnet? [y/N]: " telnet 
+read -p "Do you want to uninstall telnet? [y/N]: " telnet 
 if [[ "${telnet^^}" == "Y" ]]
 then
     apt-get -y purge telnet
@@ -17,7 +17,7 @@ if [[ "${netcat^^}" == "Y" ]]
 then
     apt-get -y purge netcat
 else
-    echo Netcat not Removed
+    echo netcat not Removed
 fi
 read -p "Do you want to uninstall ssh? [y/N]: " ssh 
 if [[ "${ssh^^}" == "Y" ]]
