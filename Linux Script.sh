@@ -67,11 +67,11 @@ apt-get install clamtk
 apt-get install clamav
 apt-get install rkhunter
 apt-get install chkrootkit
-clamscan -r --bell -i /
+clamscan
 echo ClamScan Complete
 
 read -n 1
-rkhunter --check
+rkhunter --checkall
 echo RKHunter Scan Complete
 
 read -n 1
