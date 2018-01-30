@@ -7,7 +7,6 @@ apt-get -y install libpam-cracklib
 ufw enable
 echo FireWall Up
 
-apt-get -y purge john 
 read -p "Do you want to uninstall telnet? [y/N]: " telnet 
 if [[ "${telnet^^}" == "Y" ]]
 then
@@ -45,6 +44,14 @@ else
 fi
 apt-get -y purge hydra
 apt-get -y autoremove
+apt-get -y purge john 
+apt-get -y purge Medusa
+apt-get -y purge truecrack
+apt-get -y purge ophcrack
+apt-get -y purge Kismet
+apt-get -y purge Nikto
+apt-get -y purge cryptcat
+apt-get -y purge nc
 echo Standard Suspicious Files Purged
 
 echo allow-guest=false >> /etc/lightdm/lightdm.conf
