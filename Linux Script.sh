@@ -1,5 +1,5 @@
 #!/bin/bash
-#copy and paste onto text file and use command sudo sh [file path]
+#copy and paste onto text file and use command sudo bash [file path]
 
 apt-get -y install ufw
 apt-get -y install libpam-cracklib
