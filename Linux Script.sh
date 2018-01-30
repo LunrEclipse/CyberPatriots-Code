@@ -54,16 +54,19 @@ sed -i '/^PermitRootLogin/ c\PermitRootLogin no' /etc/ssh/sshd_config
 service ssh restart
 echo root login set to no on ssh
 
-sudo sed -i '/^PASS_MAX_DAYS/ c\PASS_MAX_DAYS   90' /etc/login.defs
-sudo sed -i '/^PASS_MIN_DAYS/ c\PASS_MIN_DAYS   10'  /etc/login.defs
-sudo sed -i '/^PASS_WARN_AGE/ c\PASS_WARN_AGE   7' /etc/login.defs
+sudo sed -i '/^PASS_MAX_DAYS/ c\PASS_MAX_DAYS 90' /etc/login.defs
+sudo sed -i '/^PASS_MIN_DAYS/ c\PASS_MIN_DAYS 10'  /etc/login.defs
+sudo sed -i '/^PASS_WARN_AGE/ c\PASS_WARN_AGE 7' /etc/login.defs
 echo Password Length Set
 
 sed -i '1 s/^/auth optional pam_tally.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent\n/' /etc/pam.d/common-auth
 sed -i '1 s/^/password requisite pam_cracklib.so retry=3 minlen=8 difok=3 reject_username minclass=3 maxrepeat=2 dcredit=1 ucredit=1 lcredit=1 ocredit=1\n/' /etc/pam.d/common-password
 echo Password Policies Set
 
-apt-get install clamtk
+read -p "Do you want to run security software? [y/N]: " clamtk 
+if [[ "${clamtk^^}" == "Y" ]]
+then
+    apt-get install clamtk
 apt-get install clamav
 apt-get install rkhunter
 apt-get install chkrootkit
@@ -80,3 +83,7 @@ echo CHKRootKit Scan Complete
 
 read -n 1
 echo Script Complete
+
+else
+    echo Script Complete
+fi
