@@ -58,6 +58,7 @@ echo allow-guest=false >> /etc/lightdm/lightdm.conf
 echo Guest Account Disabled
 
 sed -i '/^PermitRootLogin/ c\PermitRootLogin no' /etc/ssh/sshd_config
+sed -i '/^Protocol 1/ c\Protocol 2' /etc/ssh/sshd_config
 service ssh restart
 echo root login set to no on ssh
 
