@@ -42,6 +42,16 @@ then
 else
     echo vsftpd not Removed
 fi
+
+read -p "Do you want to uninstall FTP? [y/N]: " ftp 
+if [[ "${ftp^^}" == "Y" ]]
+then
+    apt-get -y purge pure-ftpd
+else
+    echo vsftpd not Removed
+fi
+
+
 apt-get -y purge hydra
 apt-get -y autoremove
 apt-get -y purge john 
