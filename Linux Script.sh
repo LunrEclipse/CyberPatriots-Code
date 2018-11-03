@@ -142,6 +142,20 @@ apt-get -y purge Kismet
 apt-get -y purge Nikto
 apt-get -y purge cryptcat
 apt-get -y purge nc
+apt-get -y purge bind9
+apt-get -y purge iodine
+apt-get -y purge johntheripper
+apt-get -y purge fcrackzip
+apt-get -y purge ayttm
+apt-get -y purge empathy
+apt-get -y purge logkeys
+apt-get -y purge vino
+apt-get -y purge tightvncserver
+apt-get -y purge rdesktop
+apt-get -y purge remmina
+apt-get -y purge vinagre
+apt-get -y purge knocker
+apt-get -y purge aircrack-ng
 echo Standard Suspicious Files Purged
 
 #Guest and Root
