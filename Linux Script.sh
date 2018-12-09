@@ -48,38 +48,6 @@ then
     apt-get -y purge samba
 else
     echo samba not Removed
-    if test -e /etc/samba/smb.conf
-    then 
-        sed -i '/server role =/c\	server role = standalone server' /etc/samba/smb.conf
-        sed -i '/obey pam restrictions/c\	obey pam restrictions = yes' /etc/samba/smb.conf
-        sed -i '/usershare max shares =/c\;	usershare max shares  = 100' /etc/samba/smb.conf
-        sed -i '/usershare allow guests =/c\	usershare allow guests = no' /etc/samba/smb.conf
-    if grep 'min protocol' /etc/samba/smb.conf
-    then
-	    sed -i '/min protocol = /c\min protocol = SMB3' /etc/samba/smb.conf
-    else
-    for line_number in $(grep -n '\[global\]' /etc/samba/smb.conf | cut -d: -f1)
-    do
-		sed -i "$line_number a min protocol = SMB3" /etc/samba/smb.conf 
-    done
-    fi
-    if grep 'restrict anonymous' /etc/samba/smb.conf
-    then
-	    sed -i '/restrict anonymous = /c\restrict anonymous = 2' /etc/samba/smb.conf
-    else
-	    for line_number in $(grep -n '\[global\]' /etc/samba/smb.conf | cut -d: -f1)
-    do
-		    sed -i "$line_number a restrict anonymous = 2" /etc/samba/smb.conf 
-    done
-    fi
-    ufw deny 135/TCP
-    ufw deny 139/TCP
-    ufw deny 135/UDP
-    ufw deny 137/UDP
-    ufw deny 138/UDP
-    ufw deny 139/UDP
-    service smbd restart
-
 fi
 
 read -p "Do you want to uninstall vsftpd? [y/N]: " vsftpd 
@@ -110,25 +78,6 @@ then
     apt-get -y purge apache2
 else
     echo apache not Removed
-    if test -e /etc/apache2/conf-enabled/security.conf
-	then 
-		sed -i '/ServerSignature/c\ServerSignature Off' /etc/apache2/conf-enabled/security.conf
-		sed -i '/ServerTokens/c\ServerTokens Prod' /etc/apache2/conf-enabled/security.conf
-		sed -i '/TraceEnable/c\TraceEnable Off' /etc/apache2/conf-enabled/security.conf
-		sed -i '/ServerTokens/c\ServerTokens Prod' /etc/apache2/conf-enabled/security.conf
-
-	fi
-	if test -d /etc/modsecurity
-	then
-		mv /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
-		sed -i '/SecRuleEngine/c\SecRuleEngine On' /etc/modsecurity/modsecurity.conf
-	else
-		apt-get -y install libapache2-modsecurity
-		mv /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
-		sed -i '/SecRuleEngine/c\SecRuleEngine On' /etc/modsecurity/modsecurity.conf
-	fi
-	service apache2 restart
-
 fi
 
 #Malicious Programs
@@ -170,8 +119,15 @@ sudo sed -i '/^PASS_WARN_AGE/ c\PASS_WARN_AGE 7' /etc/login.defs
 echo Password Length Set
 
 # IP Hardening
-# Enable cookie protection
-sysctl -n net.ipv4.tcp_syncookies
+sysctl -w net.ipv4.tcp_syncookies=1
+sysctl -w net.ipv4.ip_forward=0
+sysctl -w net.ipv4.conf.all.send_redirects=0
+sysctl -w net.ipv4.conf.default.send_redirects=0
+sysctl -w net.ipv4.conf.all.accept_redirects=0
+sysctl -w net.ipv4.conf.default.accept_redirects=0
+sysctl -w net.ipv4.conf.all.secure_redirects=0
+sysctl -w net.ipv4.conf.default.secure_redirects=0
+sysctl -p
 # Disable IP Forwarding
 echo 0 > /proc/sys/net/ipv4/ip_forward
 # Disable IP Spoofing
@@ -184,6 +140,31 @@ sed -i '/^net.ipv4.ip_forward=1/ c\net.ipv4.ip_forward=0' /etc/sysctl.conf
 sed -i '1 s/^/auth optional pam_tally.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent\n/' /etc/pam.d/common-auth
 sed -i '1 s/^/password requisite pam_cracklib.so retry=3 minlen=8 difok=3 reject_username minclass=3 maxrepeat=2 dcredit=1 ucredit=1 lcredit=1 ocredit=1\n/' /etc/pam.d/common-password
 echo Password Policies Set
+
+crontab -r
+cd /etc/
+/bin/rm -f cron.deny at.deny
+echo root >cron.allow
+echo root >at.allow
+/bin/chown root:root cron.allow at.allow
+/bin/chmod 644 cron.allow at.allow
+echo Crontab Complete
+
+find / -name '*.mp3' -type f -delete
+find / -name '*.mov' -type f -delete
+find / -name '*.mp4' -type f -delete
+find / -name '*.avi' -type f -delete
+find / -name '*.mpg' -type f -delete
+find / -name '*.mpeg' -type f -delete
+find / -name '*.flac' -type f -delete
+find / -name '*.m4a' -type f -delete
+find / -name '*.flv' -type f -delete
+find / -name '*.ogg' -type f -delete
+find /home -name '*.gif' -type f -delete
+find /home -name '*.png' -type f -delete
+find /home -name '*.jpg' -type f -delete
+find /home -name '*.jpeg' -type f -delete
+echo Shady Filetypes Checked
 
 read -p "Do you want to run security software? [y/N]: " clamtk 
 if [[ "${clamtk^^}" == "Y" ]]
