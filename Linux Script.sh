@@ -172,10 +172,10 @@ find /home -name '*.jpg' -type f -delete
 find /home -name '*.jpeg' -type f -delete
 echo Shady Filetypes Checked
 
-read -p "Do you want to run security software? [y/N]: " clamtk 
-if [[ "${clamtk^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to run security software?")]]
 then
-    apt-get install clamtk
+	 apt-get install clamtk
 apt-get install clamav
 apt-get install rkhunter
 apt-get install chkrootkit
@@ -192,7 +192,7 @@ echo CHKRootKit Scan Complete
 
 read -n 1
 echo Script Complete
-
 else
-    echo Script Complete
+	echo Script Complete
 fi
+
