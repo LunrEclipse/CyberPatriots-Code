@@ -88,7 +88,6 @@ fi
 
 #Malicious Programs
 apt-get -y purge hydra
-apt-get -y autoremove
 apt-get -y purge john 
 apt-get -y purge Medusa
 apt-get -y purge truecrack
@@ -111,6 +110,7 @@ apt-get -y purge remmina
 apt-get -y purge vinagre
 apt-get -y purge knocker
 apt-get -y purge aircrack-ng
+apt-get -y autoremove
 echo Standard Suspicious Files Purged
 
 #Guest and Root
