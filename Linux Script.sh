@@ -1,6 +1,15 @@
 #!/bin/bash
 #copy and paste onto text file and use command sudo bash [file path]
 
+function ask_yes_or_no()
+{
+	read -p "$1 ([Y]es or [n]): "
+	case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+		n|no) echo "no" ;;
+		*)	echo "yes" ;;
+	esac
+}
+
 #Downloads UFW and Libpam (passwords)
 apt-get -y install ufw
 apt-get -y install libpam-cracklib
@@ -10,26 +19,25 @@ ufw enable
 echo FireWall Up
 
 #Critical Services and Configurations
-read -p "Do you want to uninstall telnet? [y/N]: " telnet 
-if [[ "${telnet^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Telnet")]]
 then
-    apt-get -y purge telnet
+	apt-get -y purge telnet
 else
-    echo Netcat Not Removed
+	echo Telnet Not Removed
 fi
 
-read -p "Do you want to uninstall netcat? [y/N]: " netcat 
-if [[ "${netcat^^}" == "Y" ]]
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove NetCat")]]
 then
-    apt-get -y purge netcat
+	apt-get -y purge netcat
 else
-    echo netcat not Removed
+	echo netcat not Removed
 fi
 
-read -p "Do you want to uninstall ssh? [y/N]: " ssh 
-if [[ "${ssh^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove SSH")]]
 then
-    apt-get -y purge ssh
+	apt-get -y purge ssh
 else
 	sed -i '/PermitRootLogin yes/c\PermitRootLogin no' /etc/ssh/sshd_config
 	sed -i '/PasswordAuthentication no/c\PasswordAuthentication yes' /etc/ssh/sshd_config
@@ -39,23 +47,21 @@ else
 	sed -i '/X11Forwarding/c\X11Forwarding no' /etc/ssh/sshd_config
 	ufw allow 222
 	service sshd restart
-
 fi
 
-read -p "Do you want to uninstall samba? [y/N]: " samba 
-if [[ "${samba^^}" == "Y" ]]
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Samba")]]
 then
-    apt-get -y purge samba
+	apt-get -y purge samba
 else
-    echo samba not Removed
+	echo Samba not Removed
 fi
 
-read -p "Do you want to uninstall vsftpd? [y/N]: " vsftpd 
-if [[ "${vsftpd^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove VSFTPD")]]
 then
-    apt-get -y purge vsftpd
+	apt-get -y purge vsftpd
 else
-    echo vsftpd not Removed
+	echo vsftpd not Removed
 	sed -i '/anonymous_enable/c\anonymous_enable=NO' /etc/vsftpd.conf
 	sed -i '/local_enable/c\local_enable=NO' /etc/vsftpd.conf
 	sed -i '/write_enable/c\write_enable=NO' /etc/vsftpd.conf
@@ -63,21 +69,21 @@ else
 	service vsftpd restart
 fi
 
-read -p "Do you want to uninstall FTP? [y/N]: " ftp 
-if [[ "${ftp^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Pure-FTP")]]
 then
-    apt-get -y purge pure-ftpd
+	apt-get -y purge pure-ftpd
 else
-    echo vsftpd not Removed
+	echo vsftpd not Removed
 fi
 
-read -p "Do you want to uninstall Apache? [y/N]: " apache 
-if [[ "${apache^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Apache")]]
 then
-    apt-get -y purge apache
-    apt-get -y purge apache2
+	apt-get -y purge apache
+    	apt-get -y purge apache2
 else
-    echo apache not Removed
+	echo apache not Removed
 fi
 
 #Malicious Programs
