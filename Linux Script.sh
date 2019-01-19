@@ -115,7 +115,7 @@ echo Standard Suspicious Files Purged
 
 #Guest and Root
 passwd -l root
-echo allow-guest=false >> /etc/lightdm/lightdm.conf
+sh -c 'printf "[Seat:*]\nallow-guest=false\n" >/etc/lightdm/lightdm.conf.d/50-no-guest.conf'
 echo Guest Account Disabled
 
 #Password Policies
