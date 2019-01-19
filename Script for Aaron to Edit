@@ -1,6 +1,15 @@
 #!/bin/bash
 #copy and paste onto text file and use command sudo bash [file path]
 
+function ask_yes_or_no()
+{
+	read -p "$1 ([Y]es or [n]): "
+	case $(echo $REPLY | tr '[A-Z]' '[a-z]') in
+		n|no) echo "no" ;;
+		*)	echo "yes" ;;
+	esac
+}
+
 #Downloads UFW and Libpam (passwords)
 apt-get -y install ufw
 apt-get -y install libpam-cracklib
@@ -10,26 +19,25 @@ ufw enable
 echo FireWall Up
 
 #Critical Services and Configurations
-read -p "Do you want to uninstall telnet? [y/N]: " telnet 
-if [[ "${telnet^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Telnet")]]
 then
-    apt-get -y purge telnet
+	apt-get -y purge telnet
 else
-    echo Netcat Not Removed
+	echo Telnet Not Removed
 fi
 
-read -p "Do you want to uninstall netcat? [y/N]: " netcat 
-if [[ "${netcat^^}" == "Y" ]]
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove NetCat")]]
 then
-    apt-get -y purge netcat
+	apt-get -y purge netcat
 else
-    echo netcat not Removed
+	echo netcat not Removed
 fi
 
-read -p "Do you want to uninstall ssh? [y/N]: " ssh 
-if [[ "${ssh^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove SSH")]]
 then
-    apt-get -y purge ssh
+	apt-get -y purge ssh
 else
 	sed -i '/PermitRootLogin yes/c\PermitRootLogin no' /etc/ssh/sshd_config
 	sed -i '/PasswordAuthentication no/c\PasswordAuthentication yes' /etc/ssh/sshd_config
@@ -39,55 +47,21 @@ else
 	sed -i '/X11Forwarding/c\X11Forwarding no' /etc/ssh/sshd_config
 	ufw allow 222
 	service sshd restart
-
 fi
 
-read -p "Do you want to uninstall samba? [y/N]: " samba 
-if [[ "${samba^^}" == "Y" ]]
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Samba")]]
 then
-    apt-get -y purge samba
+	apt-get -y purge samba
 else
-    echo samba not Removed
-    if test -e /etc/samba/smb.conf
-    then 
-        sed -i '/server role =/c\	server role = standalone server' /etc/samba/smb.conf
-        sed -i '/obey pam restrictions/c\	obey pam restrictions = yes' /etc/samba/smb.conf
-        sed -i '/usershare max shares =/c\;	usershare max shares  = 100' /etc/samba/smb.conf
-        sed -i '/usershare allow guests =/c\	usershare allow guests = no' /etc/samba/smb.conf
-    if grep 'min protocol' /etc/samba/smb.conf
-    then
-	    sed -i '/min protocol = /c\min protocol = SMB3' /etc/samba/smb.conf
-    else
-    for line_number in $(grep -n '\[global\]' /etc/samba/smb.conf | cut -d: -f1)
-    do
-		sed -i "$line_number a min protocol = SMB3" /etc/samba/smb.conf 
-    done
-    fi
-    if grep 'restrict anonymous' /etc/samba/smb.conf
-    then
-	    sed -i '/restrict anonymous = /c\restrict anonymous = 2' /etc/samba/smb.conf
-    else
-	    for line_number in $(grep -n '\[global\]' /etc/samba/smb.conf | cut -d: -f1)
-    do
-		    sed -i "$line_number a restrict anonymous = 2" /etc/samba/smb.conf 
-    done
-    fi
-    ufw deny 135/TCP
-    ufw deny 139/TCP
-    ufw deny 135/UDP
-    ufw deny 137/UDP
-    ufw deny 138/UDP
-    ufw deny 139/UDP
-    service smbd restart
-
+	echo Samba not Removed
 fi
 
-read -p "Do you want to uninstall vsftpd? [y/N]: " vsftpd 
-if [[ "${vsftpd^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove VSFTPD")]]
 then
-    apt-get -y purge vsftpd
+	apt-get -y purge vsftpd
 else
-    echo vsftpd not Removed
+	echo vsftpd not Removed
 	sed -i '/anonymous_enable/c\anonymous_enable=NO' /etc/vsftpd.conf
 	sed -i '/local_enable/c\local_enable=NO' /etc/vsftpd.conf
 	sed -i '/write_enable/c\write_enable=NO' /etc/vsftpd.conf
@@ -95,45 +69,25 @@ else
 	service vsftpd restart
 fi
 
-read -p "Do you want to uninstall FTP? [y/N]: " ftp 
-if [[ "${ftp^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Pure-FTP")]]
 then
-    apt-get -y purge pure-ftpd
+	apt-get -y purge pure-ftpd
 else
-    echo vsftpd not Removed
+	echo vsftpd not Removed
 fi
 
-read -p "Do you want to uninstall Apache? [y/N]: " apache 
-if [[ "${apache^^}" == "Y" ]]
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to remove Apache")]]
 then
-    apt-get -y purge apache
-    apt-get -y purge apache2
+	apt-get -y purge apache
+    	apt-get -y purge apache2
 else
-    echo apache not Removed
-    if test -e /etc/apache2/conf-enabled/security.conf
-	then 
-		sed -i '/ServerSignature/c\ServerSignature Off' /etc/apache2/conf-enabled/security.conf
-		sed -i '/ServerTokens/c\ServerTokens Prod' /etc/apache2/conf-enabled/security.conf
-		sed -i '/TraceEnable/c\TraceEnable Off' /etc/apache2/conf-enabled/security.conf
-		sed -i '/ServerTokens/c\ServerTokens Prod' /etc/apache2/conf-enabled/security.conf
-
-	fi
-	if test -d /etc/modsecurity
-	then
-		mv /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
-		sed -i '/SecRuleEngine/c\SecRuleEngine On' /etc/modsecurity/modsecurity.conf
-	else
-		apt-get -y install libapache2-modsecurity
-		mv /etc/modsecurity/modsecurity.conf-recommended /etc/modsecurity/modsecurity.conf
-		sed -i '/SecRuleEngine/c\SecRuleEngine On' /etc/modsecurity/modsecurity.conf
-	fi
-	service apache2 restart
-
+	echo apache not Removed
 fi
 
 #Malicious Programs
 apt-get -y purge hydra
-apt-get -y autoremove
 apt-get -y purge john 
 apt-get -y purge Medusa
 apt-get -y purge truecrack
@@ -156,11 +110,12 @@ apt-get -y purge remmina
 apt-get -y purge vinagre
 apt-get -y purge knocker
 apt-get -y purge aircrack-ng
+apt-get -y autoremove
 echo Standard Suspicious Files Purged
 
 #Guest and Root
 passwd -l root
-echo allow-guest=false >> /etc/lightdm/lightdm.conf
+sh -c 'printf "[Seat:*]\nallow-guest=false\n" >/etc/lightdm/lightdm.conf.d/50-no-guest.conf'
 echo Guest Account Disabled
 
 #Password Policies
@@ -170,8 +125,15 @@ sudo sed -i '/^PASS_WARN_AGE/ c\PASS_WARN_AGE 7' /etc/login.defs
 echo Password Length Set
 
 # IP Hardening
-# Enable cookie protection
-sysctl -n net.ipv4.tcp_syncookies
+sysctl -w net.ipv4.tcp_syncookies=1
+sysctl -w net.ipv4.ip_forward=0
+sysctl -w net.ipv4.conf.all.send_redirects=0
+sysctl -w net.ipv4.conf.default.send_redirects=0
+sysctl -w net.ipv4.conf.all.accept_redirects=0
+sysctl -w net.ipv4.conf.default.accept_redirects=0
+sysctl -w net.ipv4.conf.all.secure_redirects=0
+sysctl -w net.ipv4.conf.default.secure_redirects=0
+sysctl -p
 # Disable IP Forwarding
 echo 0 > /proc/sys/net/ipv4/ip_forward
 # Disable IP Spoofing
@@ -185,10 +147,35 @@ sed -i '1 s/^/auth optional pam_tally.so deny=5 unlock_time=900 onerr=fail audit
 sed -i '1 s/^/password requisite pam_cracklib.so retry=3 minlen=8 difok=3 reject_username minclass=3 maxrepeat=2 dcredit=1 ucredit=1 lcredit=1 ocredit=1\n/' /etc/pam.d/common-password
 echo Password Policies Set
 
-read -p "Do you want to run security software? [y/N]: " clamtk 
-if [[ "${clamtk^^}" == "Y" ]]
+crontab -r
+cd /etc/
+/bin/rm -f cron.deny at.deny
+echo root >cron.allow
+echo root >at.allow
+/bin/chown root:root cron.allow at.allow
+/bin/chmod 644 cron.allow at.allow
+echo Crontab Complete
+
+find / -name '*.mp3' -type f -delete
+find / -name '*.mov' -type f -delete
+find / -name '*.mp4' -type f -delete
+find / -name '*.avi' -type f -delete
+find / -name '*.mpg' -type f -delete
+find / -name '*.mpeg' -type f -delete
+find / -name '*.flac' -type f -delete
+find / -name '*.m4a' -type f -delete
+find / -name '*.flv' -type f -delete
+find / -name '*.ogg' -type f -delete
+find /home -name '*.gif' -type f -delete
+find /home -name '*.png' -type f -delete
+find /home -name '*.jpg' -type f -delete
+find /home -name '*.jpeg' -type f -delete
+echo Shady Filetypes Checked
+
+
+if[[ "yes" == $(ask_yes_or_no "Do you want to run security software?")]]
 then
-    apt-get install clamtk
+	 apt-get install clamtk
 apt-get install clamav
 apt-get install rkhunter
 apt-get install chkrootkit
@@ -205,7 +192,6 @@ echo CHKRootKit Scan Complete
 
 read -n 1
 echo Script Complete
-
 else
-    echo Script Complete
+	echo Script Complete
 fi
