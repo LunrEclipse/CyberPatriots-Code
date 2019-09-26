@@ -188,5 +188,16 @@ read -n 1
 echo Script Complete
 
 else
-    echo Script Complete
+
 fi
+
+read -p "Do you want to check for backdoors? [y/N]: " nmap 
+if [[ "${nmap^^}" == "Y" ]]
+then
+    apt-get -y nmap
+    nmap -n -PN -sT -sU -p- localhost
+else
+    echo Ports Checked
+fi
+
+echo Script Complete
