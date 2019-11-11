@@ -1,13 +1,108 @@
 #!/bin/bash
 #copy and paste onto text file and use command sudo bash [file path]
 
+
+
+
+#Change H3llO@ to the current password
+#Create a README.txt with all user's names
+#Create a addusers.txt with all users to add
+#Create a users.txt with all normal users
+#Create a admin.txt with all admins
+
+#change root password
+yes "H3LL0@" | passwd
+echo "Finished with changing root password"
+echo "" > usersChanged.txt
+
+
+#Change all the user passwords
+#For every user in the /etc/passwd file who has a UID >500 (generally newly added user), changes their password.
+for i in $(cat /etc/passwd | cut -d: -f 1,3,6 | grep -e "[5-9][0-9][0-9]" -e "[0-9][0-9][0-9][0-9]" | grep "/home" | cut -d: -f1) ; do 
+	yes "H3LL0@" | passwd $i ;
+	#This changes in the shadow file the max and min password days
+	passwd -x 85 $i;
+	passwd -n 15 $i;
+	#save the history into the log directory
+	cp /home/$i/.bash_history /logs/$i
+	echo $i  >> usersChanged.txt
+done;
+echo "Finished with changing all passwords"
+
+
+#Delete bad users
+#For every user in /etc/passwd file who isn’t mentioned in the README, removes them and deletes everything they have
+for i in $(cat /etc/passwd | cut -d: -f 1,3,6 | grep -e "[5-9][0-9][0-9]" -e "[0-9][0-9][0-9][0-9]" | grep "/home" | cut -d: -f1) ; do
+	if [[ $( grep -ic -e $i $(pwd)/README ) -eq 0 ]]; then	
+		(deluser $i --remove-all-files >> RemovingUsers.txt 2>&1) &  #starts deleting in background
+	fi
+done
+echo "Finished with deleting bad users"
+
+#For everyone in the addusers file, creates the user
+echo "" >> addusers.txt
+for i in $(cat $(pwd)/addusers.txt); do
+	useradd $i;
+done
+echo "Finished adding users"
+
+#Goes and makes users admin/not admin as needed
+#for every user with UID above 500 that has a home directory
+for i in $(cat /etc/passwd | cut -d: -f 1,3,6 | grep -e "[5-9][0-9][0-9]" -e "[0-9][0-9][0-9][0-9]" | grep "/home" | cut -d: -f1); do
+	#If the user is supposed to be a normal user but is in the sudo group, remove them from sudo
+	BadUser=0
+	if [[ $( grep -ic $i $(pwd)/users.txt ) -ne 0 ]]; then	
+		if [[ $( echo $( grep "sudo" /etc/group) | grep -ic $i ) -ne 0 ]]; then	
+			#if username is in sudo when shouldn’t
+			deluser $i sudo;
+			echo "removing $i from sudo" >> usersChanged.txt
+		fi
+if [[ $( echo $( grep "adm" /etc/group) | grep -ic $i ) -ne 0 ]]; then	
+			#if username is in adm when shouldn’t
+			deluser $i adm;
+			echo "removing $i from adm" >> usersChanged.txt
+		fi
+	else
+		BadUser=$((BadUser+1));
+	fi
+	#If user is supposed to be an adm but isn’t, raise privilege.
+	if [[ $( grep -ic $i $(pwd)/admin.txt ) -ne 0 ]]; then	
+		if [[ $( echo $( grep "sudo" /etc/group) | grep -ic $i ) -eq 0 ]]; then	
+			#if username isn't in sudo when should
+			usermod -a -G "sudo" $i
+			echo "add $i to sudo"  >> usersChanged.txt
+		fi
+if [[ $( echo $( grep "adm" /etc/group) | grep -ic $i ) -eq 0 ]]; then	
+			#if username isn't in adm when should
+			usermod -a -G "adm" $i
+			echo "add $i to adm"  >> usersChanged.txt
+		fi
+	else
+		BadUser=$((BadUser+1));
+	fi
+	if [[ $BadUser -eq 2 ]]; then
+		echo "WARNING: USER $i HAS AN ID THAT IS CONSISTENT WITH A NEWLY ADDED USER YET IS NOT MENTIONED IN EITHER THE admin.txt OR users.txt FILE. LOOK INTO THIS." >> usersChanged.txt
+	fi
+done
+echo "Finished changing users"
+
+
+
+
 #Downloads UFW and Libpam (passwords)
 apt-get -y install ufw
 apt-get -y install libpam-cracklib
 
 #Enables Firewall
 ufw enable
+ufw allow http
+ufw allow https
+ufw deny 23
+ufw deny 2049
+ufw deny 515
+ufw deny 111
 echo FireWall Up
+
 
 #Critical Services and Configurations
 read -p "Do you want to uninstall telnet? [y/N]: " telnet 
@@ -31,14 +126,84 @@ if [[ "${ssh^^}" == "Y" ]]
 then
     apt-get -y purge ssh
 else
-	sed -i '/PermitRootLogin yes/c\PermitRootLogin no' /etc/ssh/sshd_config
-	sed -i '/PasswordAuthentication no/c\PasswordAuthentication yes' /etc/ssh/sshd_config
-	sed -i '/PermitEmptyPasswords yes/c\PermitEmptyPasswords no' /etc/ssh/sshd_config
-	sed -i '/Port 22/c\Port 222' /etc/ssh/sshd_config
-	sed -i '/Protocol/c\Protocol 2' /etc/ssh/sshd_config
-	sed -i '/X11Forwarding/c\X11Forwarding no' /etc/ssh/sshd_config
-	ufw allow 222
-	service sshd restart
+	apt-get install ssh openssh-server openssh-client -y > /dev/null 2>&1 
+#goes and replaces the /etc/ssh/sshd_config with clean one
+echo "Replacing /etc/ssh/sshd_config" >> WorkProperly.txt
+cp /etc/ssh/sshd_config /etc/ssh/.sshd_config
+echo "# Package generated configuration file
+# See the sshd_config(5) manpage for details
+# What ports, IPs and protocols we listen for
+Port 22
+# Use these options to restrict which interfaces/protocols sshd will bind to
+#ListenAddress ::
+#ListenAddress 0.0.0.0
+Protocol 2
+# HostKeys for protocol version 2
+HostKey /etc/ssh/ssh_host_rsa_key
+HostKey /etc/ssh/ssh_host_dsa_key
+HostKey /etc/ssh/ssh_host_ecdsa_key
+#Privilege Separation is turned on for security
+UsePrivilegeSeparation yes
+# Lifetime and size of ephemeral version 1 server key
+KeyRegenerationInterval 3600
+ServerKeyBits 768
+# Logging
+SyslogFacility AUTH
+LogLevel INFO
+# Authentication:
+LoginGraceTime 120
+PermitRootLogin no
+StrictModes yes
+RSAAuthentication yes
+PubkeyAuthentication yes
+#AuthorizedKeysFile	%h/.ssh/authorized_keys
+# Don't read the user's ~/.rhosts and ~/.shosts files
+IgnoreRhosts yes
+# For this to work you will also need host keys in /etc/ssh_known_hosts
+RhostsRSAAuthentication no
+# similar for protocol version 2
+HostbasedAuthentication no
+# Uncomment if you don't trust ~/.ssh/known_hosts for RhostsRSAAuthentication
+#IgnoreUserKnownHosts yes
+# To enable empty passwords, change to yes (NOT RECOMMENDED)
+PermitEmptyPasswords no
+# Change to yes to enable challenge-response passwords (beware issues with
+# some PAM modules and threads)
+ChallengeResponseAuthentication no
+# Change to no to disable tunnelled clear text passwords
+#PasswordAuthentication yes
+# Kerberos options
+#KerberosAuthentication no
+#KerberosGetAFSToken no
+#KerberosOrLocalPasswd yes
+#KerberosTicketCleanup yes
+# GSSAPI options
+#GSSAPIAuthentication no
+#GSSAPICleanupCredentials yes
+X11Forwarding no
+X11DisplayOffset 10
+PrintMotd no
+PrintLastLog yes
+TCPKeepAlive yes
+#UseLogin no
+#MaxStartups 10:30:60
+#Banner /etc/issue.net
+# Allow client to pass locale environment variables
+AcceptEnv LANG LC_*
+Subsystem sftp /usr/lib/openssh/sftp-server
+# Set this to 'yes' to enable PAM authentication, account processing,
+# and session processing. If this is enabled, PAM authentication will
+# be allowed through the ChallengeResponseAuthentication and
+# PasswordAuthentication.  Depending on your PAM configuration,
+# PAM authentication via ChallengeResponseAuthentication may bypass
+# the setting of \"PermitRootLogin without-password\".
+# If you just want the PAM account and session checks to run without
+# PAM authentication, then enable this but set PasswordAuthentication
+# and ChallengeResponseAuthentication to 'no'.
+UsePAM yes" > /etc/ssh/sshd_config
+service ssh restart
+echo "" >> WorkProperly.txt
+echo "Finished with SSH"
 
 fi
 
@@ -60,6 +225,7 @@ else
 	sed -i '/local_enable/c\local_enable=NO' /etc/vsftpd.conf
 	sed -i '/write_enable/c\write_enable=NO' /etc/vsftpd.conf
 	sed -i '/chroot_local_user/c\chroot_local_user=YES' /etc/vsftpd.conf
+	sed -i '/^anon_upload_enable/ c\anon_upload_enable no   #' /etc/vsftpd.conf
 	service vsftpd restart
 fi
 
@@ -71,14 +237,59 @@ else
     echo vsftpd not Removed
 fi
 
+
 read -p "Do you want to uninstall Apache? [y/N]: " apache 
 if [[ "${apache^^}" == "Y" ]]
 then
     apt-get -y purge apache
     apt-get -y purge apache2
 else
+	echo \<Directory \> >> /etc/apache2/apache2.conf
+	echo -e ' \t AllowOverride None' >> /etc/apache2/apache2.conf
+	echo -e ' \t Order Deny,Allow' >> /etc/apache2/apache2.conf
+	echo -e ' \t Deny from all' >> /etc/apache2/apache2.conf
+	echo \<Directory \/\> >> /etc/apache2/apache2.conf
+	echo UserDir disabled root >> /etc/apache2/apache2.conf
     echo apache not Removed
 fi
+
+read -p "Do you want to uninstall MySQL? [y/N]: " mysql 
+if [[ "${mysql^^}" == "Y" ]]
+then
+    apt-get -y purge mysql-server
+else
+	apt-get install mysql-server php5-mysql -y > /dev/null 2>&1 
+	mysql_secure_installation
+file=$( echo /etc/mysql/my.cnf )
+#bind-address = 127.0.0.1 #
+sed -i 's/bind-address/bind-address = 127.0.0.1 # /g' $file
+service mysql restart
+    echo mysql not Removed
+fi
+
+read -p "Do you want to uninstall PHP5? [y/N]: " php5
+if [[ "${php5^^}" == "Y" ]]
+then
+    apt-get -y purge php5
+else
+	apt-get install python-software-properties -y > /dev/null 2>&1 
+	add-apt-repository ppa:ondrej/php5-oldstable
+	apt-get update -y > /dev/null 2>&1 
+	apt-get install -y php5 > /dev/null 2>&1 
+	file=$(echo /etc/php5/apache2/php.ini)
+
+	#At the end of each of these lines is a ; instead of a #, this is b/c this configuration has different syntax than bash and the ; tells it to comment the rest out.
+
+	sed -i 's/expose_php/expose_php=Off ; /g' $file
+sed -i 's/allow_url_fopen/allow_url_fopen=Off ; /g' $file
+sed -i 's/allow_url_include/allow_url_include=Off ; /g' $file
+#disable_functions 
+sed -i 's/disable_functions=/disable_functions=exec,shell_exec,passthru,system,popen,curl_exec,curl_multi_exec,parse_ini_file,show_source,proc_open,pcntl_exec,/g' $file
+sed -i 's/upload_max_filesize/upload_max_filesize = 2M ; /g' $file
+sed -i 's/max_execution_time/max_execution_time = 30 ; /g' $file
+sed -i 's/max_input_time/max_input_time = 60 ; /g' $file
+fi
+
 
 #Malicious Programs
 apt-get -y purge hydra
@@ -110,7 +321,35 @@ echo Standard Suspicious Files Purged
 #Guest and Root
 passwd -l root
 sh -c 'printf "[SeatDefaults]\nallow-guest=false\n" >/usr/share/lightdm/lightdm.conf.d/50-no-guest.conf'
+TEXT="[SeatDefaults]\nautologin-guest=false\nautologin-user=none\nautologin-user-timeout=0\nautologin-session=lightdm-autologin\nallow-guest=false\ngreeter-hide-users=true"
+printf $TEXT > /etc/lightdm/lightdm.conf
 echo Guest Account Disabled
+
+#Change the ownership and permissions of files that could commonly be exploited otherwise
+chown root:root /etc/securetty
+chmod 0600 /etc/securetty
+chmod 644 /etc/crontab
+chmod 640 /etc/ftpusers
+chmod 440 /etc/inetd.conf
+chmod 440 /etc/xinetd.conf
+chmod 400 /etc/inetd.d
+chmod 644 /etc/hosts.allow
+chmod 440 /etc/sudoers
+chmod 640 /etc/shadow
+chown root:root /etc/shadow
+echo "Finished changing permissions"
+
+#Clears out the control-alt-delete, as this could possibly be a problem
+echo "# control-alt-delete - emergency keypress handling
+#
+# This task is run whenever the Control-Alt-Delete key combination is
+# pressed, and performs a safe reboot of the machine.
+description	\"emergency keypress handling\"
+author		\"Scott James Remnant <scott@netsplit.com>\"
+start on control-alt-delete
+task
+exec false" > /etc/init/control-alt-delete.conf
+echo "Finished cleaning control-alt-delete"
 
 #Password Policies
 sudo sed -i '/^PASS_MAX_DAYS/ c\PASS_MAX_DAYS 90' /etc/login.defs
@@ -128,8 +367,25 @@ sysctl -w net.ipv4.conf.default.accept_redirects=0
 sysctl -w net.ipv4.conf.all.secure_redirects=0
 sysctl -w net.ipv4.conf.default.secure_redirects=0
 sysctl -p
+net.ipv4.tcp_syncookies = 1
+net.ipv4.tcp_rfc1337 = 1
+net.ipv4.conf.all.rp_filter = 1
+net.ipv6.conf.all.rp_filter = 1
+net.ipv4.tcp_timestamps = 0
+net.ipv4.conf.all.log_martians = 1
+net.ipv4.icmp_echo_ignore_broadcasts = 1
+net.ipv4.icmp_ignore_bogus_error_responses = 1
+net.ipv4.conf.all.send_redirects = 0
+net.ipv4.conf.default.accept_redirects=0
+net.ipv4.conf.all.accept_redirects=0
+net.ipv6.conf.default.accept_redirects=0
+net.ipv6.conf.all.accept_redirects=0
+echo "Enabled Cookie Protection"
+
 # Disable IP Forwarding
 echo 0 > /proc/sys/net/ipv4/ip_forward
+
+
 # Disable IP Spoofing
 echo "nospoof on" >> /etc/host.conf
 # Disable ipv6
@@ -140,6 +396,96 @@ sed -i '/^net.ipv4.ip_forward=1/ c\net.ipv4.ip_forward=0' /etc/sysctl.conf
 sed -i '1 s/^/auth optional pam_tally.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent\n/' /etc/pam.d/common-auth
 sed -i '1 s/^/password requisite pam_cracklib.so retry=3 minlen=8 difok=3 reject_username minclass=3 maxrepeat=2 dcredit=1 ucredit=1 lcredit=1 ocredit=1\n/' /etc/pam.d/common-password
 echo Password Policies Set
+
+
+#makes updates happen daily
+echo "APT::Periodic::Update-Package-Lists \"1\";
+APT::Periodic::Download-Upgradeable-Packages \"0\";
+APT::Periodic::AutocleanInterval \"0\";" > /etc/apt/apt.conf.d/10periodic
+echo "Checks for updates automatically"
+
+
+#makes updates also come from right places, updates repositories. However, it does not clear out ones there, so remember to do so
+
+if [[ $(echo $distro | grep -ic $debian) -eq 0 ]]
+then
+echo "deb http://security.ubuntu.com/ubuntu/ trusty-security main universe
+deb http://us.archive.ubuntu.com/ubuntu/ trusty-updates main universe" >> /etc/apt/sources.list
+add-apt-repository "deb http://archive.canonical.com/ubuntu precise partner"
+add-apt-repository "deb http://archive.ubuntu.com/ubuntu precise multiverse main universe restricted"
+add-apt-repository "deb http://security.ubuntu.com/ubuntu/ precise-security universe main multiverse restricted"
+add-apt-repository "deb http://archive.ubuntu.com/ubuntu precise-updates universe main multiverse restricted"
+echo "Updates also come from security and recommended updates"
+else
+	echo "" >> /etc/apt/sources.list
+add-apt-repository "deb http://security.debian.org wheezy/updates main"
+add-apt-repository "deb-src http://security.debian.org wheezy/updates main"
+fi
+
+
+#Cleans out the path file in case it has been modified to point to illegal places, makes a copy to the desktop in case you wanted to see it
+cp /etc/environment $(pwd)/environment
+echo "PATH=\"/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"" > /etc/environment
+echo "Finished cleaning the PATH"
+
+
+#restart all of the DNS caches to clear out any unwanted connections
+/etc/init.d/dnsmasq restart > cacheClearing.txt
+/etc/init.d/nscd -i hosts >> cacheClearing.txt #some others said reload or restart would do the same thing
+/etc/init.d/nscd reload >> cacheClearing.txt
+rndc flush >> cacheClearing.txt	#this clears the cache when bind9 is installed
+echo "Clearing computer cache:" >> cacheClearing.txt
+#These next few clear out the cache on the computer
+free >> cacheClearing.txt
+sync && echo 3 > /proc/sys/vm/drop_caches
+echo "After" >> cacheClearing.txt
+free >> cacheClearing.txt
+echo "Finished restarting caches"
+service xinetd reload
+
+#This clears out the HOST file so that unintentional/malicious networks are accidentally accessed.
+echo "Clearing HOSTS file"
+#echo $(date): Clearing HOSTS file >> Warnings.txt
+cp /etc/hosts hosts
+echo 127.0.0.1	localhost > /etc/hosts
+echo 127.0.1.1	ubuntu  >> /etc/hosts
+
+echo ::1     ip6-localhost ip6-loopback >> /etc/hosts
+echo fe00::0 ip6-localnet >> /etc/hosts
+echo ff00::0 ip6-mcastprefix >> /etc/hosts
+echo ff02::1 ip6-allnodes >> /etc/hosts
+echo ff02::2 ip6-allrouters >> /etc/hosts
+
+
+#Determines if there are any netcat backdoors running, and will delete some of them
+echo "netcat backdoors:" >> Warnings.txt
+netstat -ntlup | grep -e "netcat" -e "nc" -e "ncat" >> Warnings.txt
+
+#goes and grabs the PID of the first process that has the name netcat. Kills the executable, doesn’t go and kill the item in one of the crons. Will go through until it has removed all netcats.
+a=0;
+for i in $(netstat -ntlup | grep -e "netcat" -e "nc" -e "ncat"); do
+	if [[ $(echo $i | grep -c -e "/") -ne 0  ]]; then
+		badPID=$(ps -ef | pgrep $( echo $i  | cut -f2 -d'/'));
+		realPath=$(ls -la /proc/$badPID/exe | cut -f2 -d'>' | cut -f2 -d' ');
+		cp $realPath $a
+		echo "$realPath $a" >> Warnings.txt;
+		a=$((a+1));
+		rm $realPath;
+		kill $badPID;
+	fi
+done
+echo "" >> Warnings.txt
+echo "Finished looking for Netcat Backdoors"
+
+#Remove any bad files that are in the users cron in /var/spool/cron/crontabs
+for i in $(ls /var/spool/cron/crontabs); do
+	cp /var/spool/cron/crontabs/$i $(pwd)/$i;
+	rm /var/spool/cron/crontabs/$i;
+done
+echo "finished removing files in /var/spool/cron/crontabs"
+
+
+
 
 crontab -r
 cd /etc/
@@ -164,7 +510,29 @@ find /home -name '*.gif' -type f -delete
 find /home -name '*.png' -type f -delete
 find /home -name '*.jpg' -type f -delete
 find /home -name '*.jpeg' -type f -delete
+
+#Uses find, looks for type of regular file that has either permissions of suid of 2000 or 4000
+echo "Suspicious SUID permission files" > suspectFind.txt
+find / -type f \( -perm -04000 -o -perm -02000 \) >> suspectFind.txt 
+echo "" >> suspectFind.txt
+echo "Finished looking for suspicious files with SUID permissions"
+
+
+#Finds files that appear to be placed down by no one. Would tell you if someone placed down something, then removed their user leaving that file around
+( echo "Finding files with no Family" >> suspectFind.txt; find / \( -nouser -o -nogroup \) >> suspectFind.txt; echo "" >> suspectFind.txt; echo "Finished looking for suspicious file with no user/group" ) &
+
+#finds directories that can be written by anyone, anywhere
+( echo "finding world writable files" >> worldWrite.txt; find / -perm -2 ! -type l -ls >> worldWrite.txt; echo "Finished looking for world writable files") &
+
+
 echo Shady Filetypes Checked
+
+apt-get update
+apt-get upgrade -y
+apt-get update
+apt-get dist-upgrade -y
+
+
 
 read -p "Do you want to run security software? [y/N]: " clamtk 
 if [[ "${clamtk^^}" == "Y" ]]
@@ -188,16 +556,5 @@ read -n 1
 echo Script Complete
 
 else
-
+    echo Script Complete
 fi
-
-read -p "Do you want to check for backdoors? [y/N]: " nmap 
-if [[ "${nmap^^}" == "Y" ]]
-then
-    apt-get -y nmap
-    nmap -n -PN -sT -sU -p- localhost
-else
-    echo Ports Checked
-fi
-
-echo Script Complete
