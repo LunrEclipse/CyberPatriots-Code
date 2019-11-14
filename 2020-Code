@@ -11,7 +11,7 @@
 #Create a admin.txt with all admins
 
 #change root password
-yes "H3LL0@" | passwd
+yes "H3LL0@" | passwd 
 echo "Finished with changing root password"
 echo "" > usersChanged.txt
 
