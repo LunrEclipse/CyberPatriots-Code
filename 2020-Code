@@ -367,19 +367,6 @@ sysctl -w net.ipv4.conf.default.accept_redirects=0
 sysctl -w net.ipv4.conf.all.secure_redirects=0
 sysctl -w net.ipv4.conf.default.secure_redirects=0
 sysctl -p
-net.ipv4.tcp_syncookies = 1
-net.ipv4.tcp_rfc1337 = 1
-net.ipv4.conf.all.rp_filter = 1
-net.ipv6.conf.all.rp_filter = 1
-net.ipv4.tcp_timestamps = 0
-net.ipv4.conf.all.log_martians = 1
-net.ipv4.icmp_echo_ignore_broadcasts = 1
-net.ipv4.icmp_ignore_bogus_error_responses = 1
-net.ipv4.conf.all.send_redirects = 0
-net.ipv4.conf.default.accept_redirects=0
-net.ipv4.conf.all.accept_redirects=0
-net.ipv6.conf.default.accept_redirects=0
-net.ipv6.conf.all.accept_redirects=0
 echo "Enabled Cookie Protection"
 
 # Disable IP Forwarding
@@ -532,29 +519,4 @@ apt-get upgrade -y
 apt-get update
 apt-get dist-upgrade -y
 
-
-
-read -p "Do you want to run security software? [y/N]: " clamtk 
-if [[ "${clamtk^^}" == "Y" ]]
-then
-    apt-get install clamtk
-apt-get install clamav
-apt-get install rkhunter
-apt-get install chkrootkit
-clamscan -ir --remove=yes
-echo ClamScan Complete
-
-read -n 1
-rkhunter --checkall
-echo RKHunter Scan Complete
-
-read -n 1
-chkrootkit -q
-echo CHKRootKit Scan Complete
-
-read -n 1
 echo Script Complete
-
-else
-    echo Script Complete
-fi
