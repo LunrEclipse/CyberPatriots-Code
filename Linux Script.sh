@@ -275,6 +275,21 @@ echo root >at.allow
 /bin/chmod 644 cron.allow at.allow
 echo Crontab Complete
 
+#This clears out the HOST file so that unintentional/malicious networks are accidentally accessed.
+echo "Clearing HOSTS file"
+#echo $(date): Clearing HOSTS file >> Warnings.txt
+cp /etc/hosts hosts
+echo 127.0.0.1	localhost > /etc/hosts
+echo 127.0.1.1	ubuntu  >> /etc/hosts
+
+echo ::1     ip6-localhost ip6-loopback >> /etc/hosts
+echo fe00::0 ip6-localnet >> /etc/hosts
+echo ff00::0 ip6-mcastprefix >> /etc/hosts
+echo ff02::1 ip6-allnodes >> /etc/hosts
+echo ff02::2 ip6-allrouters >> /etc/hosts
+
+
+
 find / -name '*.mp3' -type f -delete
 find / -name '*.mov' -type f -delete
 find / -name '*.mp4' -type f -delete
