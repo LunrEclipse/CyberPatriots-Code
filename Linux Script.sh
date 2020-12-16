@@ -258,6 +258,8 @@ echo "Enabled Cookie Protection"
 
 # Disable IP Forwarding
 echo 0 > /proc/sys/net/ipv4/ip_forward
+echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+echo 2 > /proc/sys/kernel/randomize_va_space
 
 # Disable IP Spoofing
 echo "nospoof on" >> /etc/host.conf
@@ -273,6 +275,18 @@ echo root >cron.allow
 echo root >at.allow
 /bin/chown root:root cron.allow at.allow
 /bin/chmod 644 cron.allow at.allow
+
+chmod 644 /etc/group
+chown root /etc/group
+chown :root /etc/group
+chmod 644 /etc/passwd
+chown root /etc/passwd
+chown :root /etc/passwd
+chmod 600 /etc/shadow
+chown root /etc/shadow
+chown :root /etc/shadow
+
+
 echo Crontab Complete
 
 #This clears out the HOST file so that unintentional/malicious networks are accidentally accessed.
