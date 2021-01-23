@@ -265,7 +265,7 @@ echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
 echo 2 > /proc/sys/kernel/randomize_va_space
 
 # Disable IP Spoofing
-echo "nospoof on" >> /etc/host.conf
+# echo "nospoof on" >> /etc/host.conf
 
 sed -i '1 s/^/auth optional pam_tally.so deny=5 unlock_time=900 onerr=fail audit even_deny_root_account silent\n/' /etc/pam.d/common-auth
 sed -i '1 s/^/password requisite pam_cracklib.so retry=3 minlen=8 difok=3 reject_username minclass=3 maxrepeat=2 dcredit=1 ucredit=1 lcredit=1 ocredit=1\n/' /etc/pam.d/common-password
